@@ -27,4 +27,5 @@ bin/
 .vscode/
 
 ### Mac OS ###
-.DS_Storedatabase.dat
+.DS_Store
+database.dat
