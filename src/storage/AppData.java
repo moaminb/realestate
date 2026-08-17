@@ -6,7 +6,7 @@ import java.util.List;
 import model.*;
 
 public class AppData implements Serializable {
-    private static final long serialVersionUID = 1L; // برای هماهنگی در بازخوانی فایل‌ها
+    private static final long serialVersionUID = 1L;
 
     private List<User> users;
     private List<House> houses;
@@ -19,7 +19,6 @@ public class AppData implements Serializable {
         this.contracts = new ArrayList<>();
         this.agency = new Agency();
     }
-
 
     public List<User> getUsers() { return users; }
     public List<House> getHouses() { return houses; }

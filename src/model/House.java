@@ -1,26 +1,23 @@
 package model;
+
 import java.io.Serializable;
 
 public abstract class House implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    // --- ثابت‌های سیستم (Constants) ---
     public static final double BASE_PRICE_PER_METER = 10_000_000;
     public static final double RENT_RATE = 0.004;
 
-    // ضرایب مناطق چهارگانه
     public static final double REGION_1_COEFFICIENT = 1.8;
     public static final double REGION_2_COEFFICIENT = 1.4;
     public static final double REGION_3_COEFFICIENT = 1.1;
     public static final double REGION_4_COEFFICIENT = 0.8;
 
-    // --- وضعیت‌های معامله ملک ---
     public enum DealStatus {
         FOR_SALE,
         FOR_RENT,
         BOTH
     }
-
 
     private String id;
     private double area;
@@ -32,7 +29,6 @@ public abstract class House implements Serializable {
     private String tenantName;
     private DealStatus dealStatus;
 
-
     public House(String id, double area, int bedrooms, int bathrooms, int floor, int region, String ownerName, DealStatus dealStatus) {
         this.id = id;
         this.area = area;
@@ -41,27 +37,20 @@ public abstract class House implements Serializable {
         this.floor = floor;
         this.region = region;
         this.ownerName = ownerName;
-        this.tenantName = ""; // در ابتدا خانه مستأجر ندارد
+        this.tenantName = "";
         this.dealStatus = dealStatus;
     }
 
-
-
-    // ادیت: تغییر خروجی به long برای پشتیبانی از مقادیر تریلیاردی و مبالغ بزرگ صحیح
     public long calculateBasePrice() {
         double regionCoefficient = getRegionCoefficient();
-        // محاسبات با دقت اعشاری انجام شده و نتیجه نهایی به long تبدیل می‌شود
         return (long) (this.area * BASE_PRICE_PER_METER * regionCoefficient);
     }
 
-    // ادیت: متد انتزاعی محاسبه قیمت نهایی خروجی long خواهد داشت تا فرزندان ملزم به بازگرداندن long باشند
     public abstract long calculatePrice();
 
-    // ادیت: تغییر خروجی به long و تبدیل اعشار به عدد صحیح بزرگ
     public long calculateRent() {
         return (long) (calculatePrice() * RENT_RATE);
     }
-
 
     private double getRegionCoefficient() {
         switch (this.region) {
@@ -72,7 +61,6 @@ public abstract class House implements Serializable {
             default: return 1.0;
         }
     }
-
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

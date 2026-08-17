@@ -1,15 +1,14 @@
 package model;
+
 import java.io.Serializable;
 
 public class Contract implements Serializable {
-    private static final long serialVersionUID = 1L; // برای هماهنگی هربار ذخیره و بازیابی در فایل
-
+    private static final long serialVersionUID = 1L;
 
     public enum ContractType {
         RENT,
         SPECIAL_PURCHASE
     }
-
 
     private String id;
     private String houseId;
@@ -18,7 +17,6 @@ public class Contract implements Serializable {
     private long price;
     private long cancellationPenalty;
     private ContractType contractType;
-
 
     public Contract(String id, String houseId, String landlordName, String tenantOrBuyerName,
                     long price, ContractType contractType) {
@@ -29,22 +27,19 @@ public class Contract implements Serializable {
         this.price = price;
         this.contractType = contractType;
 
-
         if (contractType == ContractType.RENT) {
-            // ادیت: انجام محاسبات اعشاری میانی و کست کردن نهایی به long برای حفظ دقت ریاضی
             this.cancellationPenalty = (long) (price * 1.5);
         } else {
             this.cancellationPenalty = 0L;
         }
     }
 
-     public boolean canCancel(long userBudget) {
+    public boolean canCancel(long userBudget) {
         if (this.contractType != ContractType.RENT) {
             return false;
         }
         return userBudget >= this.cancellationPenalty;
     }
-
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -58,14 +53,10 @@ public class Contract implements Serializable {
     public String getTenantOrBuyerName() { return tenantOrBuyerName; }
     public void setTenantOrBuyerName(String tenantOrBuyerName) { this.tenantOrBuyerName = tenantOrBuyerName; }
 
-
     public long getPrice() { return price; }
-
     public void setPrice(long price) { this.price = price; }
 
-
     public long getCancellationPenalty() { return cancellationPenalty; }
-
     public void setCancellationPenalty(long cancellationPenalty) { this.cancellationPenalty = cancellationPenalty; }
 
     public ContractType getContractType() { return contractType; }
