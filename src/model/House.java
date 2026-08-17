@@ -2,7 +2,7 @@ package model;
 
 import java.io.Serializable;
 
-public abstract class House implements Serializable {
+public abstract class House implements Serializable, Sellable, Rentable {
     private static final long serialVersionUID = 1L;
 
     public static final double BASE_PRICE_PER_METER = 10_000_000;
@@ -46,8 +46,10 @@ public abstract class House implements Serializable {
         return (long) (this.area * BASE_PRICE_PER_METER * regionCoefficient);
     }
 
+    @Override
     public abstract long calculatePrice();
 
+    @Override
     public long calculateRent() {
         return (long) (calculatePrice() * RENT_RATE);
     }
@@ -80,10 +82,16 @@ public abstract class House implements Serializable {
     public int getRegion() { return region; }
     public void setRegion(int region) { this.region = region; }
 
+    @Override
     public String getOwnerName() { return ownerName; }
+
+    @Override
     public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
 
+    @Override
     public String getTenantName() { return tenantName; }
+
+    @Override
     public void setTenantName(String tenantName) { this.tenantName = tenantName; }
 
     public DealStatus getDealStatus() { return dealStatus; }
