@@ -15,10 +15,9 @@ public class Penthouse extends House {
     @Override
     public long calculatePrice() {
         long basePrice = calculateBasePrice();
-        double bedroomsBonus = 1 + (0.03 * getBedrooms());
-        double floorBonus = 1 + (0.01 * getFloor());
-
-        return (long) (basePrice * bedroomsBonus * floorBonus);
+        long luxuryValue = (long) (basePrice * LUXURY_COEFFICIENT);
+        long terraceValue = (long) (terraceArea * TERRACE_PRICE_PER_METER);
+        return luxuryValue + terraceValue;
     }
 
     public double getTerraceArea() { return terraceArea; }

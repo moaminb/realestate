@@ -45,6 +45,15 @@ public class UserService {
         return null;
     }
 
+    public User findUserById(String id) {
+        for (User u : data.getUsers()) {
+            if (u.getId().equalsIgnoreCase(id)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
     public List<User> getAllUsers() {
         return data.getUsers();
     }

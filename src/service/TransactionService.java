@@ -24,7 +24,7 @@ public class TransactionService {
         }
 
         House house = propertyService.findHouseById(houseId);
-        if (house == null || house.getDealStatus() == House.DealStatus.FOR_RENT) {
+        if (house == null || (house.getDealStatus() != House.DealStatus.FOR_SALE && house.getDealStatus() != House.DealStatus.BOTH)) {
             return TransactionResult.INVALID_DEAL_STATUS;
         }
 
@@ -41,8 +41,14 @@ public class TransactionService {
                 seller.deposit(price);
             }
 
+            if (!house.getTenantName().isEmpty()) {
+                User tenant = userService.findUserByUsername(house.getTenantName());
+                if (tenant != null) tenant.removeRentedHouse(houseId);
+                house.setTenantName("");
+            }
+
             house.setOwnerName(currentUser.getUsername());
-            house.setDealStatus(House.DealStatus.FOR_RENT);
+            house.setDealStatus(House.DealStatus.NOT_LISTED);
             currentUser.addPurchasedHouse(houseId);
 
             if (isAgencyOwned) {
@@ -63,7 +69,9 @@ public class TransactionService {
         }
 
         House house = propertyService.findHouseById(houseId);
-        if (house == null || house.getDealStatus() == House.DealStatus.FOR_SALE || !house.getTenantName().isEmpty()) {
+        if (house == null
+                || (house.getDealStatus() != House.DealStatus.FOR_RENT && house.getDealStatus() != House.DealStatus.BOTH)
+                || !house.getTenantName().isEmpty()) {
             return TransactionResult.INVALID_DEAL_STATUS;
         }
 
@@ -108,11 +116,12 @@ public class TransactionService {
         if (currentUser.withdraw(specialPrice)) {
             if (seller != null) {
                 seller.deposit(specialPrice);
-                if (!house.getTenantName().isEmpty()) {
-                    User tenant = userService.findUserByUsername(house.getTenantName());
-                    if (tenant != null) tenant.removeRentedHouse(houseId);
-                    house.setTenantName("");
-                }
+            }
+
+            if (!house.getTenantName().isEmpty()) {
+                User tenant = userService.findUserByUsername(house.getTenantName());
+                if (tenant != null) tenant.removeRentedHouse(houseId);
+                house.setTenantName("");
             }
 
             String contractId = "CTR-" + (data.getContracts().size() + 1);
@@ -120,7 +129,7 @@ public class TransactionService {
             data.getContracts().add(contract);
 
             house.setOwnerName(currentUser.getUsername());
-            house.setDealStatus(House.DealStatus.FOR_RENT);
+            house.setDealStatus(House.DealStatus.NOT_LISTED);
             currentUser.addPurchasedHouse(houseId);
 
             StorageManager.saveData(data);
@@ -148,6 +157,22 @@ public class TransactionService {
         house.setDealStatus(House.DealStatus.BOTH);
         data.getAgency().addHouseToAgency(houseId);
 
+        StorageManager.saveData(data);
+        return TransactionResult.SUCCESS;
+    }
+
+    public TransactionResult relistHouse(String houseId, House.DealStatus newStatus) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser == null) {
+            return TransactionResult.NOT_LOGGED_IN;
+        }
+
+        House house = propertyService.findHouseById(houseId);
+        if (house == null || !house.getOwnerName().equalsIgnoreCase(currentUser.getUsername())) {
+            return TransactionResult.NOT_THE_OWNER;
+        }
+
+        house.setDealStatus(newStatus);
         StorageManager.saveData(data);
         return TransactionResult.SUCCESS;
     }

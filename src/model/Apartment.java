@@ -19,10 +19,7 @@ public class Apartment extends House {
     @Override
     public long calculatePrice() {
         long basePrice = calculateBasePrice();
-        double bedroomsBonus = 1 + (0.03 * getBedrooms());
-        double floorBonus = 1 + (0.01 * getFloor());
-
-        return (long) (basePrice * bedroomsBonus * floorBonus);
+        return (long) (basePrice * bedroomFloorBonus());
     }
 
 

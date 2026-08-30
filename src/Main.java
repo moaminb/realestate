@@ -1,3 +1,4 @@
+import java.util.List;
 import java.util.Scanner;
 import factory.HouseFactory;
 import model.*;
@@ -10,6 +11,7 @@ public class Main {
     private static AuthService authService = new AuthService(appData);
     private static UserService userService = new UserService(appData);
     private static PropertyService propertyService = new PropertyService(appData);
+    private static ContractService contractService = new ContractService(appData, userService, propertyService);
     private static TransactionService transactionService = new TransactionService(appData, authService, userService, propertyService);
     private static Scanner scanner = new Scanner(System.in);
 
@@ -53,14 +55,21 @@ public class Main {
         User user = authService.getCurrentUser();
         System.out.println("\n--- پنل کاربری: " + user.getUsername() + " | موجودی: " + String.format("%,d", user.getBudget()) + " ریال ---");
         System.out.println("1. ثبت ملک جدید برای فروش/اجاره");
-        System.out.println("2. مشاهده لیست تمام املاک موجود");
-        System.out.println("3. خرید عادی ملک");
-        System.out.println("4. اجاره ملک");
-        System.out.println("5. خرید ویژه (امتیازی - پرداخت ۲ برابر قیمت)");
-        System.out.println("6. فروش فوری ملک خود به بنگاه (۱۰٪ تخفیف)");
-        System.out.println("7. مشاهده املاک من (خریداری یا اجاره شده)");
-        System.out.println("8. خروج از حساب کاربری");
-        System.out.println("9. شارژ حساب (افزایش موجودی)");
+        System.out.println("2. مشاهده لیست خانه‌های فروشی");
+        System.out.println("3. مشاهده لیست خانه‌های اجاره‌ای");
+        System.out.println("4. مشاهده اطلاعات یک خانه با شناسه");
+        System.out.println("5. خرید عادی ملک");
+        System.out.println("6. اجاره ملک");
+        System.out.println("7. خرید ویژه (امتیازی - پرداخت ۲ برابر قیمت)");
+        System.out.println("8. فروش فوری ملک خود به بنگاه (۱۰٪ تخفیف)");
+        System.out.println("9. بازگذاری ملک من برای فروش/اجاره");
+        System.out.println("10. مشاهده خانه‌های خریداری‌شده من");
+        System.out.println("11. مشاهده خانه‌های اجاره‌شده من");
+        System.out.println("12. مشاهده قراردادهای من");
+        System.out.println("13. مشاهده جزئیات قرارداد با شناسه");
+        System.out.println("14. لغو قرارداد اجاره");
+        System.out.println("15. شارژ حساب (افزایش موجودی)");
+        System.out.println("16. خروج از حساب کاربری");
         System.out.print("لطفاً یک گزینه را انتخاب کنید: ");
 
         String choice = scanner.nextLine();
@@ -69,29 +78,50 @@ public class Main {
                 handleRegisterHouse();
                 break;
             case "2":
-                handleShowAllHouses();
+                handleShowForSaleHouses();
                 break;
             case "3":
-                handlePurchaseHouse();
+                handleShowForRentHouses();
                 break;
             case "4":
-                handleRentHouse();
+                handleShowHouseById();
                 break;
             case "5":
-                handleSpecialPurchaseHouse();
+                handlePurchaseHouse();
                 break;
             case "6":
-                handleQuickSellHouse();
+                handleRentHouse();
                 break;
             case "7":
-                handleShowMyProperties();
+                handleSpecialPurchaseHouse();
                 break;
             case "8":
-                authService.logout();
-                System.out.println("👋 با موفقیت از حساب کاربری خارج شدید.");
+                handleQuickSellHouse();
                 break;
             case "9":
+                handleRelistHouse();
+                break;
+            case "10":
+                handleShowPurchasedHouses();
+                break;
+            case "11":
+                handleShowRentedHouses();
+                break;
+            case "12":
+                handleShowMyContracts();
+                break;
+            case "13":
+                handleShowContractById();
+                break;
+            case "14":
+                handleCancelContract();
+                break;
+            case "15":
                 handleChargeAccount();
+                break;
+            case "16":
+                authService.logout();
+                System.out.println("👋 با موفقیت از حساب کاربری خارج شدید.");
                 break;
             default:
                 System.out.println("❌ گزینه نامعتبر است.");
@@ -103,6 +133,14 @@ public class Main {
         String username = scanner.nextLine();
         System.out.print("رمز عبور: ");
         String password = scanner.nextLine();
+        System.out.print("تکرار رمز عبور: ");
+        String passwordConfirm = scanner.nextLine();
+
+        if (!password.equals(passwordConfirm)) {
+            System.out.println("❌ خطا: رمز عبور و تکرار آن یکسان نیستند.");
+            return;
+        }
+
         long budget = readLong("موجودی اولیه (بودجه): ");
 
         boolean success = userService.registerUser(username, password, budget);
@@ -148,44 +186,74 @@ public class Main {
         String houseId = "HSE-" + (propertyService.getHousesCount() + 1);
         String owner = authService.getCurrentUser().getUsername();
 
-        House newHouse = null;
-        if (type.equals("1")) {
-            int unitNo = readInt("شماره واحد: ");
-            int totalFloors = readInt("تعداد کل طبقات ساختمان: ");
-            int totalUnits = readInt("تعداد کل واحدهای ساختمان: ");
-            newHouse = HouseFactory.createApartment(houseId, area, bedrooms, bathrooms, floor, region, owner, status, unitNo, totalFloors, totalUnits);
-        } else if (type.equals("2")) {
-            double yardArea = readDouble("متراژ حیاط: ");
-            int floorsCount = readInt("تعداد طبقات ویلا: ");
-            newHouse = HouseFactory.createVilla(houseId, area, bedrooms, bathrooms, floor, region, owner, status, yardArea, floorsCount);
-        } else if (type.equals("3")) {
-            double terraceArea = readDouble("متراژ تراس: ");
-            newHouse = HouseFactory.createPenthouse(houseId, area, bedrooms, bathrooms, floor, region, owner, status, terraceArea);
+        HouseFactory.HouseTypeSpecificParams params = new HouseFactory.HouseTypeSpecificParams();
+        if (type.equals(HouseFactory.TYPE_APARTMENT)) {
+            params.unitNumber = readInt("شماره واحد: ");
+            params.totalFloors = readInt("تعداد کل طبقات ساختمان: ");
+            params.totalUnits = readInt("تعداد کل واحدهای ساختمان: ");
+        } else if (type.equals(HouseFactory.TYPE_VILLA)) {
+            params.yardArea = readDouble("متراژ حیاط: ");
+            params.floorsCount = readInt("تعداد طبقات ویلا: ");
+        } else if (type.equals(HouseFactory.TYPE_PENTHOUSE)) {
+            params.terraceArea = readDouble("متراژ تراس: ");
         } else {
             System.out.println("❌ نوع ملک نامعتبر است.");
             return;
         }
 
+        House newHouse = HouseFactory.create(type, houseId, area, bedrooms, bathrooms, floor, region, owner, status, params);
         propertyService.registerHouse(newHouse);
         System.out.println("✅ ملک با موفقیت و با شناسه " + houseId + " ثبت شد:)");
     }
 
-    private static void handleShowAllHouses() {
-        System.out.println("\n--- لیست تمام املاک سیستم ---");
-        if (propertyService.getAllHouses().isEmpty()) {
-            System.out.println("هیچ ملکی ثبت نشده است.");
+    private static void printHouseSummary(House h) {
+        System.out.printf("🆔 شناسه: %s | نوع: %s | مالک: %s | مستأجر: %s | وضعیت: %s | قیمت کل: %,d ریال | اجاره ماهیانه: %,d ریال%n",
+                h.getId(),
+                h.getClass().getSimpleName(),
+                h.getOwnerName(),
+                h.getTenantName().isEmpty() ? "ندارد" : h.getTenantName(),
+                h.getDealStatus(),
+                h.calculatePrice(),
+                h.calculateRent());
+    }
+
+    private static void handleShowForSaleHouses() {
+        System.out.println("\n--- لیست خانه‌های فروشی ---");
+        boolean found = false;
+        for (House h : propertyService.getAllHouses()) {
+            if (h.getDealStatus() == House.DealStatus.FOR_SALE || h.getDealStatus() == House.DealStatus.BOTH) {
+                printHouseSummary(h);
+                found = true;
+            }
+        }
+        if (!found) {
+            System.out.println("هیچ خانه‌ای برای فروش ثبت نشده است.");
+        }
+    }
+
+    private static void handleShowForRentHouses() {
+        System.out.println("\n--- لیست خانه‌های اجاره‌ای ---");
+        boolean found = false;
+        for (House h : propertyService.getAllHouses()) {
+            if (h.getDealStatus() == House.DealStatus.FOR_RENT || h.getDealStatus() == House.DealStatus.BOTH) {
+                printHouseSummary(h);
+                found = true;
+            }
+        }
+        if (!found) {
+            System.out.println("هیچ خانه‌ای برای اجاره ثبت نشده است.");
+        }
+    }
+
+    private static void handleShowHouseById() {
+        System.out.print("شناسه (ID) خانه مورد نظر را وارد کنید: ");
+        String id = scanner.nextLine();
+        House house = propertyService.findHouseById(id);
+        if (house == null) {
+            System.out.println("❌ خانه‌ای با این شناسه یافت نشد.");
             return;
         }
-        for (House h : propertyService.getAllHouses()) {
-            System.out.printf("🆔 شناسه: %s | نوع: %s | مالک: %s | مستأجر: %s | وضعیت: %s | قیمت کل: %,d ریال | اجاره ماهیانه: %,d ریال%n",
-                    h.getId(),
-                    h.getClass().getSimpleName(),
-                    h.getOwnerName(),
-                    h.getTenantName().isEmpty() ? "ندارد" : h.getTenantName(),
-                    h.getDealStatus(),
-                    h.calculatePrice(),
-                    h.calculateRent());
-        }
+        printHouseSummary(house);
     }
 
     private static void handlePurchaseHouse() {
@@ -267,22 +335,133 @@ public class Main {
         }
     }
 
-    private static void handleShowMyProperties() {
-        User user = authService.getCurrentUser();
-        System.out.println("\n--- املاک تحت مالکیت شما ---");
-        boolean hasProperty = false;
-        for (House h : propertyService.getAllHouses()) {
-            if (h.getOwnerName().equals(user.getUsername())) {
-                System.out.printf("🏠 [مالک هستید] شناسه: %s | نوع: %s | وضعیت معامله فعلی: %s%n", h.getId(), h.getClass().getSimpleName(), h.getDealStatus());
-                hasProperty = true;
-            }
-            if (h.getTenantName().equals(user.getUsername())) {
-                System.out.printf("🔑 [مستأجر هستید] شناسه: %s | نوع: %s | مالک اصلی: %s%n", h.getId(), h.getClass().getSimpleName(), h.getOwnerName());
-                hasProperty = true;
-            }
+    private static void handleRelistHouse() {
+        System.out.print("شناسه ملکی که مالک آن هستید را وارد کنید: ");
+        String houseId = scanner.nextLine();
+        System.out.println("وضعیت جدید: 1. فروش | 2. اجاره | 3. فروش و اجاره");
+        System.out.print("گزینه: ");
+        String choice = scanner.nextLine();
+        House.DealStatus newStatus;
+        switch (choice) {
+            case "1":
+                newStatus = House.DealStatus.FOR_SALE;
+                break;
+            case "2":
+                newStatus = House.DealStatus.FOR_RENT;
+                break;
+            case "3":
+                newStatus = House.DealStatus.BOTH;
+                break;
+            default:
+                System.out.println("❌ گزینه نامعتبر است.");
+                return;
         }
-        if (!hasProperty) {
-            System.out.println("شما در حال حاضر مالک یا مستأجر هیچ ملکی نیستید.");
+
+        TransactionResult result = transactionService.relistHouse(houseId, newStatus);
+        switch (result) {
+            case SUCCESS:
+                System.out.println("✅ وضعیت ملک با موفقیت به‌روزرسانی شد.");
+                break;
+            case NOT_THE_OWNER:
+                System.out.println("❌ شما مالک این ملک نیستید یا ملک وجود ندارد.");
+                break;
+            default:
+                System.out.println("❌ به‌روزرسانی وضعیت ملک با خطا مواجه شد.");
+        }
+    }
+
+    private static void showHouseIdsThenDetail(List<String> houseIds) {
+        if (houseIds.isEmpty()) {
+            System.out.println("موردی برای نمایش وجود ندارد.");
+            return;
+        }
+        System.out.println("شناسه‌های خانه:");
+        for (String id : houseIds) {
+            System.out.println("🆔 " + id);
+        }
+        System.out.print("برای مشاهده جزئیات، شناسه یک خانه را وارد کنید (یا خالی بگذارید): ");
+        String chosenId = scanner.nextLine();
+        if (chosenId.isEmpty()) {
+            return;
+        }
+        House house = propertyService.findHouseById(chosenId);
+        if (house == null) {
+            System.out.println("❌ خانه‌ای با این شناسه یافت نشد.");
+            return;
+        }
+        printHouseSummary(house);
+    }
+
+    private static void handleShowPurchasedHouses() {
+        User user = authService.getCurrentUser();
+        System.out.println("\n--- خانه‌های خریداری‌شده من ---");
+        showHouseIdsThenDetail(user.getPurchasedHouseIds());
+    }
+
+    private static void handleShowRentedHouses() {
+        User user = authService.getCurrentUser();
+        System.out.println("\n--- خانه‌های اجاره‌شده من ---");
+        showHouseIdsThenDetail(user.getRentedHouseIds());
+    }
+
+    private static void printContractSummary(Contract c) {
+        System.out.printf("🆔 قرارداد: %s | خانه: %s | نوع: %s | طرف مقابل: %s | قیمت: %,d ریال%n",
+                c.getId(), c.getHouseId(), c.getContractType(),
+                c.getLandlordName(), c.getPrice());
+    }
+
+    private static void handleShowMyContracts() {
+        User user = authService.getCurrentUser();
+        System.out.println("\n--- قراردادهای من ---");
+        List<Contract> contracts = contractService.getContractsForUser(user.getUsername());
+        if (contracts.isEmpty()) {
+            System.out.println("شما هیچ قراردادی ندارید.");
+            return;
+        }
+        for (Contract c : contracts) {
+            printContractSummary(c);
+        }
+    }
+
+    private static void handleShowContractById() {
+        System.out.print("شناسه (ID) قرارداد مورد نظر را وارد کنید: ");
+        String id = scanner.nextLine();
+        Contract contract = contractService.findContractById(id);
+        if (contract == null) {
+            System.out.println("❌ قراردادی با این شناسه یافت نشد.");
+            return;
+        }
+        System.out.printf("🆔 شناسه قرارداد: %s%n", contract.getId());
+        System.out.printf("🏠 شناسه خانه: %s%n", contract.getHouseId());
+        System.out.printf("📄 نوع قرارداد: %s%n", contract.getContractType());
+        System.out.printf("👤 طرف مقابل (مالک/موجر): %s%n", contract.getLandlordName());
+        System.out.printf("👤 مستأجر/خریدار: %s%n", contract.getTenantOrBuyerName());
+        System.out.printf("💰 قیمت قرارداد: %,d ریال%n", contract.getPrice());
+        System.out.printf("⚠️ جریمه لغو قرارداد: %,d ریال%n", contract.getCancellationPenalty());
+    }
+
+    private static void handleCancelContract() {
+        System.out.print("شناسه (ID) قرارداد اجاره‌ای که می‌خواهید لغو کنید را وارد کنید: ");
+        String id = scanner.nextLine();
+        TransactionResult result = contractService.cancelContract(id, authService.getCurrentUser());
+        switch (result) {
+            case SUCCESS:
+                System.out.println("✅ قرارداد با موفقیت لغو شد و جریمه پرداخت گردید.");
+                break;
+            case CONTRACT_NOT_FOUND:
+                System.out.println("❌ قراردادی با این شناسه یافت نشد.");
+                break;
+            case NOT_CANCELLABLE:
+                System.out.println("❌ این قرارداد قابل لغو نیست (قرارداد اجاره نیست).");
+                break;
+            case NOT_THE_TENANT:
+                System.out.println("❌ شما مستأجر این قرارداد نیستید.");
+                break;
+            case INSUFFICIENT_FUNDS:
+                System.out.println("❌ موجودی حساب شما برای پرداخت جریمه لغو کافی نیست!");
+                break;
+            default:
+                System.out.println("❌ لغو قرارداد با خطا مواجه شد.");
         }
     }
 

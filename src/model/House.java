@@ -16,7 +16,8 @@ public abstract class House implements Serializable, Sellable, Rentable {
     public enum DealStatus {
         FOR_SALE,
         FOR_RENT,
-        BOTH
+        BOTH,
+        NOT_LISTED
     }
 
     private String id;
@@ -44,6 +45,12 @@ public abstract class House implements Serializable, Sellable, Rentable {
     public long calculateBasePrice() {
         double regionCoefficient = getRegionCoefficient();
         return (long) (this.area * BASE_PRICE_PER_METER * regionCoefficient);
+    }
+
+    protected double bedroomFloorBonus() {
+        double bedroomsBonus = 1 + (0.03 * getBedrooms());
+        double floorBonus = 1 + (0.01 * getFloor());
+        return bedroomsBonus * floorBonus;
     }
 
     @Override

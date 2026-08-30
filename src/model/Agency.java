@@ -6,7 +6,7 @@ import java.util.List;
 
 public class Agency implements Serializable {
 
-    public static final String AGENCY_OWNER_NAME = "بنگاه املاک ";
+    public static final String AGENCY_OWNER_NAME = "بنگاه املاک";
 
     private List<String> agencyHouseIds;
 
