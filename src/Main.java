@@ -12,7 +12,7 @@ public class Main {
     private static UserService userService = new UserService(appData);
     private static PropertyService propertyService = new PropertyService(appData);
     private static ContractService contractService = new ContractService(appData, userService, propertyService);
-    private static TransactionService transactionService = new TransactionService(appData, authService, userService, propertyService);
+    private static TransactionService transactionService = new TransactionService(appData, authService, userService, propertyService, contractService);
     private static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -130,9 +130,17 @@ public class Main {
 
     private static void handleRegister() {
         System.out.print("نام کاربری جدید: ");
-        String username = scanner.nextLine();
+        String username = scanner.nextLine().trim();
+        if (username.isEmpty()) {
+            System.out.println("❌ خطا: نام کاربری نمی‌تواند خالی باشد.");
+            return;
+        }
         System.out.print("رمز عبور: ");
         String password = scanner.nextLine();
+        if (password.trim().isEmpty()) {
+            System.out.println("❌ خطا: رمز عبور نمی‌تواند خالی باشد.");
+            return;
+        }
         System.out.print("تکرار رمز عبور: ");
         String passwordConfirm = scanner.nextLine();
 
@@ -141,7 +149,7 @@ public class Main {
             return;
         }
 
-        long budget = readLong("موجودی اولیه (بودجه): ");
+        long budget = readNonNegativeLong("موجودی اولیه (بودجه): ");
 
         boolean success = userService.registerUser(username, password, budget);
         if (success) {
@@ -153,7 +161,7 @@ public class Main {
 
     private static void handleLogin() {
         System.out.print("نام کاربری: ");
-        String username = scanner.nextLine();
+        String username = scanner.nextLine().trim();
         System.out.print("رمز عبور: ");
         String password = scanner.nextLine();
 
@@ -173,29 +181,29 @@ public class Main {
         System.out.print("گزینه: ");
         String type = scanner.nextLine();
 
-        double area = readDouble("متراژ (مساحت به متر مربع): ");
-        int bedrooms = readInt("تعداد اتاق خواب: ");
-        int bathrooms = readInt("تعداد حمام/سرویس: ");
+        double area = readPositiveDouble("متراژ (مساحت به متر مربع): ");
+        int bedrooms = readNonNegativeInt("تعداد اتاق خواب: ");
+        int bathrooms = readNonNegativeInt("تعداد حمام/سرویس: ");
         int floor = readInt("طبقه: ");
-        int region = readInt("منطقه (عددی بین ۱ تا ۴): ");
+        int region = readRangeInt("منطقه (عددی بین ۱ تا ۴): ", 1, 4);
 
         System.out.println("وضعیت معامله: 1. فروش | 2. اجاره");
         System.out.print("گزینه: ");
         House.DealStatus status = scanner.nextLine().equals("1") ? House.DealStatus.FOR_SALE : House.DealStatus.FOR_RENT;
 
-        String houseId = "HSE-" + (propertyService.getHousesCount() + 1);
+        String houseId = propertyService.generateNextHouseId();
         String owner = authService.getCurrentUser().getUsername();
 
         HouseFactory.HouseTypeSpecificParams params = new HouseFactory.HouseTypeSpecificParams();
         if (type.equals(HouseFactory.TYPE_APARTMENT)) {
-            params.unitNumber = readInt("شماره واحد: ");
-            params.totalFloors = readInt("تعداد کل طبقات ساختمان: ");
-            params.totalUnits = readInt("تعداد کل واحدهای ساختمان: ");
+            params.setUnitNumber(readPositiveInt("شماره واحد: "));
+            params.setTotalFloors(readPositiveInt("تعداد کل طبقات ساختمان: "));
+            params.setTotalUnits(readPositiveInt("تعداد کل واحدهای ساختمان: "));
         } else if (type.equals(HouseFactory.TYPE_VILLA)) {
-            params.yardArea = readDouble("متراژ حیاط: ");
-            params.floorsCount = readInt("تعداد طبقات ویلا: ");
+            params.setYardArea(readPositiveDouble("متراژ حیاط: "));
+            params.setFloorsCount(readPositiveInt("تعداد طبقات ویلا: "));
         } else if (type.equals(HouseFactory.TYPE_PENTHOUSE)) {
-            params.terraceArea = readDouble("متراژ تراس: ");
+            params.setTerraceArea(readPositiveDouble("متراژ تراس: "));
         } else {
             System.out.println("❌ نوع ملک نامعتبر است.");
             return;
@@ -203,18 +211,77 @@ public class Main {
 
         House newHouse = HouseFactory.create(type, houseId, area, bedrooms, bathrooms, floor, region, owner, status, params);
         propertyService.registerHouse(newHouse);
+        authService.getCurrentUser().addPurchasedHouse(houseId);
+        StorageManager.saveData(appData);
         System.out.println("✅ ملک با موفقیت و با شناسه " + houseId + " ثبت شد:)");
+    }
+
+    private static String getHouseTypeName(House h) {
+        if (h instanceof Apartment) return "آپارتمان (Apartment)";
+        if (h instanceof Villa) return "ویلا (Villa)";
+        if (h instanceof Penthouse) return "پنت‌هاوس (Penthouse)";
+        return "نامشخص";
+    }
+
+    private static String getDealStatusLabel(House.DealStatus status) {
+        if (status == null) return "نامشخص";
+        switch (status) {
+            case FOR_SALE: return "فقط برای فروش";
+            case FOR_RENT: return "فقط برای اجاره";
+            case BOTH: return "فروش و اجاره";
+            case NOT_LISTED: return "خارج از لیست معامله (ثبت‌نشده)";
+            default: return status.name();
+        }
     }
 
     private static void printHouseSummary(House h) {
         System.out.printf("🆔 شناسه: %s | نوع: %s | مالک: %s | مستأجر: %s | وضعیت: %s | قیمت کل: %,d ریال | اجاره ماهیانه: %,d ریال%n",
                 h.getId(),
-                h.getClass().getSimpleName(),
+                getHouseTypeName(h),
                 h.getOwnerName(),
                 h.getTenantName().isEmpty() ? "ندارد" : h.getTenantName(),
-                h.getDealStatus(),
+                getDealStatusLabel(h.getDealStatus()),
                 h.calculatePrice(),
                 h.calculateRent());
+    }
+
+    private static void printHouseFullDetails(House h) {
+        System.out.println("--------------------------------------------------");
+        System.out.printf("🏠 شناسه ملک: %s%n", h.getId());
+        System.out.printf("🏢 نوع ملک: %s%n", getHouseTypeName(h));
+        System.out.printf("📐 متراژ بنا: %.1f متر مربع%n", h.getArea());
+        System.out.printf("🛏️ تعداد اتاق خواب: %d%n", h.getBedrooms());
+        System.out.printf("🚿 تعداد حمام و سرویس: %d%n", h.getBathrooms());
+        System.out.printf("🪜 طبقه: %d%n", h.getFloor());
+        System.out.printf("📍 منطقه شهری: %d (ضریب قیمت: %.1f)%n", h.getRegion(), getRegionCoeff(h.getRegion()));
+        if (h instanceof Apartment) {
+            Apartment a = (Apartment) h;
+            System.out.printf("🔢 شماره واحد: %d | تعداد کل طبقات: %d | تعداد کل واحدها: %d%n",
+                    a.getUnitNumber(), a.getTotalFloors(), a.getTotalUnits());
+        } else if (h instanceof Villa) {
+            Villa v = (Villa) h;
+            System.out.printf("🌳 متراژ حیاط: %.1f متر مربع | تعداد طبقات ویلا: %d%n",
+                    v.getYardArea(), v.getFloorsCount());
+        } else if (h instanceof Penthouse) {
+            Penthouse p = (Penthouse) h;
+            System.out.printf("🌅 متراژ تراس: %.1f متر مربع%n", p.getTerraceArea());
+        }
+        System.out.printf("👤 مالک فعلی: %s%n", h.getOwnerName());
+        System.out.printf("👤 مستأجر: %s%n", h.getTenantName().isEmpty() ? "ندارد" : h.getTenantName());
+        System.out.printf("📋 وضعیت معامله: %s%n", getDealStatusLabel(h.getDealStatus()));
+        System.out.printf("💰 قیمت محاسبه‌شده برای خرید: %,d ریال%n", h.calculatePrice());
+        System.out.printf("💳 اجاره ماهیانه محاسبه‌شده: %,d ریال%n", h.calculateRent());
+        System.out.println("--------------------------------------------------");
+    }
+
+    private static double getRegionCoeff(int region) {
+        switch (region) {
+            case 1: return House.REGION_1_COEFFICIENT;
+            case 2: return House.REGION_2_COEFFICIENT;
+            case 3: return House.REGION_3_COEFFICIENT;
+            case 4: return House.REGION_4_COEFFICIENT;
+            default: return 1.0;
+        }
     }
 
     private static void handleShowForSaleHouses() {
@@ -253,7 +320,7 @@ public class Main {
             System.out.println("❌ خانه‌ای با این شناسه یافت نشد.");
             return;
         }
-        printHouseSummary(house);
+        printHouseFullDetails(house);
     }
 
     private static void handlePurchaseHouse() {
@@ -288,6 +355,9 @@ public class Main {
                 break;
             case INVALID_DEAL_STATUS:
                 System.out.println("❌ این ملک برای اجاره در دسترس نیست!");
+                break;
+            case SELF_RENT_FORBIDDEN:
+                System.out.println("❌ خطا: شما خودتان مالک این ملک هستید و نمی‌توانید آن را به خودتان اجاره دهید!");
                 break;
             case INSUFFICIENT_FUNDS:
                 System.out.println("❌ موجودی کافی برای پرداخت اجاره وجود ندارد!");
@@ -379,7 +449,7 @@ public class Main {
         for (String id : houseIds) {
             System.out.println("🆔 " + id);
         }
-        System.out.print("برای مشاهده جزئیات، شناسه یک خانه را وارد کنید (یا خالی بگذارید): ");
+        System.out.print("برای مشاهده جزئیات کامل، شناسه یک خانه را وارد کنید (یا خالی بگذارید): ");
         String chosenId = scanner.nextLine();
         if (chosenId.isEmpty()) {
             return;
@@ -389,7 +459,7 @@ public class Main {
             System.out.println("❌ خانه‌ای با این شناسه یافت نشد.");
             return;
         }
-        printHouseSummary(house);
+        printHouseFullDetails(house);
     }
 
     private static void handleShowPurchasedHouses() {
@@ -404,10 +474,13 @@ public class Main {
         showHouseIdsThenDetail(user.getRentedHouseIds());
     }
 
-    private static void printContractSummary(Contract c) {
+    private static void printContractSummary(Contract c, String currentUsername) {
+        String oppositeParty = c.getLandlordName().equalsIgnoreCase(currentUsername)
+                ? c.getTenantOrBuyerName()
+                : c.getLandlordName();
         System.out.printf("🆔 قرارداد: %s | خانه: %s | نوع: %s | طرف مقابل: %s | قیمت: %,d ریال%n",
                 c.getId(), c.getHouseId(), c.getContractType(),
-                c.getLandlordName(), c.getPrice());
+                oppositeParty, c.getPrice());
     }
 
     private static void handleShowMyContracts() {
@@ -419,7 +492,7 @@ public class Main {
             return;
         }
         for (Contract c : contracts) {
-            printContractSummary(c);
+            printContractSummary(c, user.getUsername());
         }
     }
 
@@ -466,7 +539,7 @@ public class Main {
     }
 
     private static void handleChargeAccount() {
-        long amount = readLong("مبلغ مورد نظر برای شارژ حساب را وارد کنید (ریال): ");
+        long amount = readPositiveLong("مبلغ مورد نظر برای شارژ حساب را وارد کنید (ریال): ");
         boolean success = userService.chargeAccount(authService.getCurrentUser(), amount);
         if (success) {
             System.out.printf("✅ موجودی حساب شما با موفقیت %,d ریال افزایش یافت.%n", amount);
@@ -479,10 +552,40 @@ public class Main {
         while (true) {
             try {
                 System.out.print(prompt);
-                return Integer.parseInt(scanner.nextLine());
+                return Integer.parseInt(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
                 System.out.println("❌ خطا: لطفاً یک عدد صحیح معتبر وارد کنید.");
             }
+        }
+    }
+
+    private static int readPositiveInt(String prompt) {
+        while (true) {
+            int val = readInt(prompt);
+            if (val > 0) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده باید یک عدد مثبت (بزرگتر از صفر) باشد.");
+        }
+    }
+
+    private static int readNonNegativeInt(String prompt) {
+        while (true) {
+            int val = readInt(prompt);
+            if (val >= 0) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده نمی‌تواند منفی باشد.");
+        }
+    }
+
+    private static int readRangeInt(String prompt, int min, int max) {
+        while (true) {
+            int val = readInt(prompt);
+            if (val >= min && val <= max) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده باید بین " + min + " و " + max + " باشد.");
         }
     }
 
@@ -490,10 +593,30 @@ public class Main {
         while (true) {
             try {
                 System.out.print(prompt);
-                return Long.parseLong(scanner.nextLine());
+                return Long.parseLong(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
                 System.out.println("❌ خطا: لطفاً یک عدد معتبر وارد کنید.");
             }
+        }
+    }
+
+    private static long readPositiveLong(String prompt) {
+        while (true) {
+            long val = readLong(prompt);
+            if (val > 0) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده باید یک عدد مثبت (بزرگتر از صفر) باشد.");
+        }
+    }
+
+    private static long readNonNegativeLong(String prompt) {
+        while (true) {
+            long val = readLong(prompt);
+            if (val >= 0) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده نمی‌تواند منفی باشد.");
         }
     }
 
@@ -501,10 +624,20 @@ public class Main {
         while (true) {
             try {
                 System.out.print(prompt);
-                return Double.parseDouble(scanner.nextLine());
+                return Double.parseDouble(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
                 System.out.println("❌ خطا: لطفاً یک عدد معتبر وارد کنید.");
             }
+        }
+    }
+
+    private static double readPositiveDouble(String prompt) {
+        while (true) {
+            double val = readDouble(prompt);
+            if (val > 0) {
+                return val;
+            }
+            System.out.println("❌ خطا: مقدار وارد شده باید عددی بزرگتر از صفر باشد.");
         }
     }
 }

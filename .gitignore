@@ -32,3 +32,6 @@ bin/
 .DS_Store
 database.dat
 ROADMAP.md
+*.class
+bin/
+out/

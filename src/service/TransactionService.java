@@ -9,12 +9,18 @@ public class TransactionService {
     private final AuthService authService;
     private final UserService userService;
     private final PropertyService propertyService;
+    private final ContractService contractService;
 
-    public TransactionService(AppData data, AuthService authService, UserService userService, PropertyService propertyService) {
+    public TransactionService(AppData data, AuthService authService, UserService userService, PropertyService propertyService, ContractService contractService) {
         this.data = data;
         this.authService = authService;
         this.userService = userService;
         this.propertyService = propertyService;
+        this.contractService = contractService;
+    }
+
+    public TransactionService(AppData data, AuthService authService, UserService userService, PropertyService propertyService) {
+        this(data, authService, userService, propertyService, new ContractService(data, userService, propertyService));
     }
 
     public TransactionResult purchaseHouse(String houseId) {
@@ -39,11 +45,11 @@ public class TransactionService {
         if (currentUser.withdraw(price)) {
             if (!isAgencyOwned && seller != null) {
                 seller.deposit(price);
+                seller.removePurchasedHouse(houseId);
             }
 
             if (!house.getTenantName().isEmpty()) {
-                User tenant = userService.findUserByUsername(house.getTenantName());
-                if (tenant != null) tenant.removeRentedHouse(houseId);
+                contractService.terminateRentalContractsForHouse(houseId);
                 house.setTenantName("");
             }
 
@@ -75,6 +81,10 @@ public class TransactionService {
             return TransactionResult.INVALID_DEAL_STATUS;
         }
 
+        if (house.getOwnerName().equalsIgnoreCase(currentUser.getUsername())) {
+            return TransactionResult.SELF_RENT_FORBIDDEN;
+        }
+
         long rentPrice = house.calculateRent();
         if (currentUser.withdraw(rentPrice)) {
             User landlord = userService.findUserByUsername(house.getOwnerName());
@@ -82,7 +92,7 @@ public class TransactionService {
                 landlord.deposit(rentPrice);
             }
 
-            String contractId = "CTR-" + (data.getContracts().size() + 1);
+            String contractId = "CTR-" + data.getNextContractSequence();
             Contract contract = new Contract(contractId, houseId, house.getOwnerName(), currentUser.getUsername(), rentPrice, Contract.ContractType.RENT);
             data.getContracts().add(contract);
 
@@ -116,15 +126,15 @@ public class TransactionService {
         if (currentUser.withdraw(specialPrice)) {
             if (seller != null) {
                 seller.deposit(specialPrice);
+                seller.removePurchasedHouse(houseId);
             }
 
             if (!house.getTenantName().isEmpty()) {
-                User tenant = userService.findUserByUsername(house.getTenantName());
-                if (tenant != null) tenant.removeRentedHouse(houseId);
+                contractService.terminateRentalContractsForHouse(houseId);
                 house.setTenantName("");
             }
 
-            String contractId = "CTR-" + (data.getContracts().size() + 1);
+            String contractId = "CTR-" + data.getNextContractSequence();
             Contract contract = new Contract(contractId, houseId, house.getOwnerName(), currentUser.getUsername(), specialPrice, Contract.ContractType.SPECIAL_PURCHASE);
             data.getContracts().add(contract);
 
@@ -152,6 +162,12 @@ public class TransactionService {
 
         long quickSellPrice = (long) (house.calculatePrice() * 0.9);
         currentUser.deposit(quickSellPrice);
+        currentUser.removePurchasedHouse(houseId);
+
+        if (!house.getTenantName().isEmpty()) {
+            contractService.terminateRentalContractsForHouse(houseId);
+            house.setTenantName("");
+        }
 
         house.setOwnerName(Agency.AGENCY_OWNER_NAME);
         house.setDealStatus(House.DealStatus.BOTH);

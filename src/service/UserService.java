@@ -14,14 +14,24 @@ public class UserService {
     }
 
     public boolean registerUser(String username, String password, long initialBudget) {
+        if (username == null || username.trim().isEmpty() || password == null || password.trim().isEmpty() || initialBudget < 0) {
+            return false;
+        }
+        String cleanUsername = username.trim();
+        if (cleanUsername.equalsIgnoreCase(model.Agency.AGENCY_OWNER_NAME)
+                || cleanUsername.equalsIgnoreCase("agency")
+                || cleanUsername.equalsIgnoreCase("املاکی")
+                || cleanUsername.equalsIgnoreCase("بنگاه")) {
+            return false;
+        }
         for (User u : data.getUsers()) {
-            if (u.getUsername().equalsIgnoreCase(username)) {
+            if (u.getUsername().equalsIgnoreCase(cleanUsername)) {
                 return false;
             }
         }
-        String id = "USR-" + (data.getUsers().size() + 1);
+        String id = "USR-" + data.getNextUserSequence();
         String hashedPassword = SecurityUtils.hashPassword(password);
-        User newUser = new User(id, username, hashedPassword, initialBudget);
+        User newUser = new User(id, cleanUsername, hashedPassword, initialBudget);
         data.getUsers().add(newUser);
         StorageManager.saveData(data);
         return true;

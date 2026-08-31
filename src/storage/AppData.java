@@ -13,11 +13,42 @@ public class AppData implements Serializable {
     private List<Contract> contracts;
     private Agency agency;
 
+    private int userCounter;
+    private int houseCounter;
+    private int contractCounter;
+
     public AppData() {
         this.users = new ArrayList<>();
         this.houses = new ArrayList<>();
         this.contracts = new ArrayList<>();
         this.agency = new Agency();
+        this.userCounter = 0;
+        this.houseCounter = 0;
+        this.contractCounter = 0;
+    }
+
+    public int getNextUserSequence() {
+        if (userCounter < users.size()) {
+            userCounter = users.size();
+        }
+        userCounter++;
+        return userCounter;
+    }
+
+    public int getNextHouseSequence() {
+        if (houseCounter < houses.size()) {
+            houseCounter = houses.size();
+        }
+        houseCounter++;
+        return houseCounter;
+    }
+
+    public int getNextContractSequence() {
+        if (contractCounter < contracts.size()) {
+            contractCounter = contracts.size();
+        }
+        contractCounter++;
+        return contractCounter;
     }
 
     public List<User> getUsers() { return users; }

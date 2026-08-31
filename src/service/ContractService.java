@@ -1,6 +1,7 @@
 package service;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import model.Agency;
 import model.Contract;
@@ -39,6 +40,23 @@ public class ContractService {
         return null;
     }
 
+    public void terminateRentalContractsForHouse(String houseId) {
+        if (houseId == null || houseId.isEmpty()) {
+            return;
+        }
+        Iterator<Contract> iterator = data.getContracts().iterator();
+        while (iterator.hasNext()) {
+            Contract c = iterator.next();
+            if (c.getHouseId().equalsIgnoreCase(houseId) && c.getContractType() == Contract.ContractType.RENT) {
+                User tenant = userService.findUserByUsername(c.getTenantOrBuyerName());
+                if (tenant != null) {
+                    tenant.removeRentedHouse(houseId);
+                }
+                iterator.remove();
+            }
+        }
+    }
+
     public TransactionResult cancelContract(String contractId, User currentUser) {
         Contract contract = findContractById(contractId);
         if (contract == null) {
@@ -65,7 +83,7 @@ public class ContractService {
         }
 
         House house = propertyService.findHouseById(contract.getHouseId());
-        if (house != null) {
+        if (house != null && house.getTenantName().equalsIgnoreCase(currentUser.getUsername())) {
             house.setTenantName("");
             house.setDealStatus(House.DealStatus.FOR_RENT);
         }

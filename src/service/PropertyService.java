@@ -26,6 +26,10 @@ public class PropertyService {
         return null;
     }
 
+    public String generateNextHouseId() {
+        return "HSE-" + data.getNextHouseSequence();
+    }
+
     public List<House> getAllHouses() {
         return data.getHouses();
     }

@@ -63,6 +63,10 @@ public class User implements Serializable {
         this.purchasedHouseIds.add(houseId);
     }
 
+    public void removePurchasedHouse(String houseId) {
+        this.purchasedHouseIds.remove(houseId);
+    }
+
     public List<String> getRentedHouseIds() {
         return rentedHouseIds;
     }
