@@ -48,8 +48,9 @@ realestate/
 │   ├── TransactionServiceTest.java # تست‌های جامع معاملات و رفع باگ‌ها
 │   └── UserServiceTest.java      # تست‌های مدیریت کاربران
 │
-├── run_app.sh                    # اسکریپت اجرای سریع برنامه اصلی
-├── run_tests.sh                  # اسکریپت اجرای سریع تست‌های خودکار
+├── run_app.command               # اسکریپت دابل کلیک مک / اجرای برنامه اصلی
+├── run.command                   # میانبر اجرای دابل کلیک مک
+├── run_tests.command             # اسکریپت دابل کلیک مک برای اجرای تست‌ها
 ├── .gitignore                    # فایل‌های نادیده‌گرفته‌شده در گیت
 └── README.md                     # راهنمای جامع پروژه
 ```
@@ -62,9 +63,13 @@ realestate/
 - **Java Development Kit (JDK) 8 یا بالاتر** (کامپایلر با هدف جاوا ۸ پیکربندی شده است).
 
 ### ۱. اجرای برنامه اصلی (Application)
-برای اجرای سریع برنامه می‌توانید از اسکریپت آماده استفاده کنید:
+- **در سیستم‌عامل مک (macOS):**
+  می‌توانید مستقیماً روی فایل [`run.command`](file:///Users/amin/Desktop/realestate/run.command) یا [`run_app.command`](file:///Users/amin/Desktop/realestate/run_app.command) در Finder **دابل کلیک** کنید تا ترمینال باز شده و برنامه بلافاصله اجرا گردد.
+- **در محیط خط فرمان (ترمینال):**
 ```bash
-./run_app.sh
+./run.command
+# یا
+./run_app.command
 ```
 یا با دستورات استاندارد زیر در ترمینال اجرا نمایید:
 ```bash
@@ -76,9 +81,10 @@ java -cp bin Main
 ---
 
 ### ۲. اجرای مجموعه تست‌های خودکار (Automated Tests)
-تست‌ها کاملاً از کد برنامه تفکیک شده‌اند و با یک دستور مجزا اجرا می‌شوند:
+- **در سیستم‌عامل مک (macOS):** با دابل کلیک روی [`run_tests.command`](file:///Users/amin/Desktop/realestate/run_tests.command).
+- **در محیط خط فرمان (ترمینال):**
 ```bash
-./run_tests.sh
+./run_tests.command
 ```
 یا با دستور مستقیم:
 ```bash
